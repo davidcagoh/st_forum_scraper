@@ -25,6 +25,9 @@ def load_forum_links():
         print("forum_links.json not found.")
         return []
 
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+
 def get_article_details(url):
     # Setup headless Chrome browser
     chrome_options = Options()
@@ -34,21 +37,29 @@ def get_article_details(url):
     driver = webdriver.Chrome(options=chrome_options)
     driver.get(url)
 
-    # Wait for the page to load fully
-    time.sleep(3)
+    # Wait until article content is fully loaded
+    try:
+        WebDriverWait(driver, 3).until(
+            EC.presence_of_element_located((By.CSS_SELECTOR, ".article-content"))
+        )
 
-    # Extract article title, date, and body text
-    title = driver.find_element(By.CSS_SELECTOR, "h1").text
-    date = driver.find_element(By.CSS_SELECTOR, "button.updated-timestamp").text  # Updated selector for date
-    body = driver.find_element(By.CSS_SELECTOR, ".article-content").text  # Corrected selector for body content
+        # Extract article title, date, and body text
+        title = driver.find_element(By.CSS_SELECTOR, "h1").text
+        date = driver.find_element(By.CSS_SELECTOR, "button.updated-timestamp").text
+        body = driver.find_element(By.CSS_SELECTOR, ".article-content").text
 
-    driver.quit()
+        return {
+            "title": title,
+            "date": date,
+            "body": body
+        }
 
-    return {
-        "title": title,
-        "date": date,
-        "body": body
-    }
+    except Exception as e:
+        print(f"Failed to extract article: {url}\nReason: {e}")
+        return None
+
+    finally:
+        driver.quit()
 
 def save_to_csv(articles):
     # Save extracted article data to a CSV file
